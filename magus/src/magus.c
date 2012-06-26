@@ -44,7 +44,7 @@ void lan(GtkWidget *widget, gpointer data) {
 	rec = recv(sock, buffer, buffsize - 1, 0);
 	buffer[rec] = '\0';
 
-	printf("lan %s\n", buffer);
+	//printf("lan %s\n", buffer);
 
 	gtk_button_set_label((GtkButton *) widget, buffer);
 
@@ -66,8 +66,9 @@ void clcon(GtkWidget *widget, gpointer data) {
 		gtk_button_set_label((GtkButton *) widget, "disconnected");
 		gtk_widget_hide_all(gamebox);
 		gtk_widget_show_all(logbox);
-		pixbuf = gdk_pixbuf_new_from_file_at_scale_utf8("pic/0.jpg", 500, 500, TRUE, error);
-		gtk_image_set_from_pixbuf( (GtkImage *)image, pixbuf);
+		pixbuf = gdk_pixbuf_new_from_file_at_scale_utf8("pic/0.jpg", 500, 500,
+				TRUE, error);
+		gtk_image_set_from_pixbuf((GtkImage *) image, pixbuf);
 	}
 	return;
 }
@@ -75,17 +76,16 @@ void clcon(GtkWidget *widget, gpointer data) {
 void login(GtkWidget *widget, gpointer data) {
 	gchar *login = data;
 	GtkWidget *popup;
+	char buffer[20];
 
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (status))) {
 
 		if (send(sock, login, strlen(login) + 1, 0) != strlen(login) + 1)
 			puts("send() sent a different number of bytes than expected");
 
-		rec = recv(sock, login, buffsize - 1, 0);
+		rec = recv(sock, buffer, buffsize - 1, 0);
 
-		printf("%s\n",login);
-
-		if (!strcmp(login, "TRUE")) {
+		if (strcmp(buffer, "TRUE")) {
 			return;
 		} else {
 			gtk_button_clicked((GtkButton *) cbutton);
@@ -112,10 +112,10 @@ void set_image(GtkWidget *widget, gpointer data) {
 	rec = recv(sock, src, buffsize - 1, 0);
 	src[rec] = '\0';
 
-	printf("image %s\n", src);
+	//printf("image %s\n", src);
 
 	pixbuf = gdk_pixbuf_new_from_file_at_scale_utf8(src, 500, 500, TRUE, error);
-	gtk_image_set_from_pixbuf( (GtkImage *)image, pixbuf);
+	gtk_image_set_from_pixbuf((GtkImage *) image, pixbuf);
 
 }
 
@@ -159,7 +159,8 @@ int main(int argc, char *argv[]) {
 	logbox = gtk_vbox_new(FALSE, 0);
 	gamebox = gtk_vbox_new(FALSE, 0);
 	//image = gtk_image_new_from_file_utf8("maemo.png");
-	pixbuf = gdk_pixbuf_new_from_file_at_scale_utf8("pic/0.jpg", 500, 500, TRUE, error);
+	pixbuf = gdk_pixbuf_new_from_file_at_scale_utf8("pic/0.jpg", 500, 500, TRUE,
+			error);
 	image = gtk_image_new_from_pixbuf(pixbuf);
 	gtk_container_add(GTK_CONTAINER (poz), image);
 	gtk_box_pack_start(GTK_BOX (poz), box, FALSE, FALSE, 10);

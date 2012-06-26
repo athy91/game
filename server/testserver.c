@@ -20,13 +20,13 @@ struct sockaddr_in echoClntAddr; /* Client address */
 
 extern int usleep();
 
-int random(int t,int i){
+int random(int t, int i) {
 	static int l[10];
 	int r;
 	do {
 		r = (rand() % t);
-	}while (r == l[i]);
-	l[i]=r;
+	} while (r == l[i]);
+	l[i] = r;
 	return r;
 }
 
@@ -64,7 +64,7 @@ void ans() {
 void pic() {
 	int r;
 	char tmp[10];
-	r = random(8, 1);
+	r = random(8, 1) + 1;
 	itoa(r, tmp, 10);
 	strcpy(sent, "pic/");
 	strcat(sent, tmp);
@@ -93,6 +93,7 @@ int login(int clntSocket) {
 	for (;;) {
 		if ((recvMsgSize = recv(clntSocket, echoBuffer, RCVBUFSIZE, 0)) < 0)
 			DieWithError("recv() failed");
+
 		if (!strcmp(echoBuffer, "athy91")) {
 			break;
 		}
@@ -104,7 +105,6 @@ int login(int clntSocket) {
 			DieWithError("send() failed");
 
 	}
-	printf("ne bassz fel");
 	if (send(clntSocket, "TRUE", 5, 0) != 5)
 		DieWithError("send() failed");
 	return 0;
@@ -126,20 +126,20 @@ void HandleTCPClient(int clntSocket) /* TCP client handling function */
 
 		echoBuffer[recvMsgSize] = '\0';
 
-		printf("%s\n", echoBuffer);
+		//printf("%s\n", echoBuffer);
 
 		if (!strcmp(echoBuffer, "exit")) {
 			dc(clntSocket);
 			return;
 		} else if (!strcmp(echoBuffer, "pic")) {
 			pic();
-			printf("image %s\n", sent);
+			//printf("image %s\n", sent);
 		} else {
 			ans();
-			printf("lan %s\n", sent);
+			//printf("lan %s\n", sent);
 		}
 
-		printf("real %s\n", sent);
+		//printf("real %s\n", sent);
 
 		/* Echo message back to client */
 		if (send(clntSocket, sent, strlen(sent), 0) != strlen(sent))
