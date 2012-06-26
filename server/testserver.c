@@ -12,15 +12,30 @@
 
 #define MAXPENDING 5    /* Maximum outstanding connection requests */
 #define RCVBUFSIZE 32
+#define LN 1
 
 char sent[20];
 int servSock; /* Socket descriptor for server */
 int clntSock; /* Socket descriptor for client */
 struct sockaddr_in echoClntAddr; /* Client address */
 
+typedef struct birth_date {
+	int year;
+	int month;
+	int day;
+} BORN;
+
+typedef struct character {
+	BORN born;
+	char name[31], House[31], Gender;
+	int height, weight, age, rep, str, dex, inte;
+	int spd, vit, wis, sta, cha, hly;
+	int kl[LN], pt[20], tech[20], abil[20], talent[20];
+} CHAR;
+
 extern int usleep();
 
-int random(int t, int i) {
+int random(int t, int i = 0) {
 	static int l[10];
 	int r;
 	do {
@@ -32,39 +47,39 @@ int random(int t, int i) {
 
 void ans() {
 	int r;
-	r = random(6, 0);
+	r = random(6, 1);
 	switch (r) {
-	case 0: {
-		strcpy(sent, "anyád");
-		break;
-	}
-	case 1: {
-		strcpy(sent, "gennyláda");
-		break;
-	}
-	case 2: {
-		strcpy(sent, "apád");
-		break;
-	}
-	case 3: {
-		strcpy(sent, "buzi");
-		break;
-	}
-	case 4: {
-		strcpy(sent, "faszom");
-		break;
-	}
-	case 5: {
-		strcpy(sent, "geci");
-		break;
-	}
+		case 0: {
+			strcpy(sent, "anyád");
+			break;
+		}
+		case 1: {
+			strcpy(sent, "gennyláda");
+			break;
+		}
+		case 2: {
+			strcpy(sent, "apád");
+			break;
+		}
+		case 3: {
+			strcpy(sent, "buzi");
+			break;
+		}
+		case 4: {
+			strcpy(sent, "faszom");
+			break;
+		}
+		case 5: {
+			strcpy(sent, "geci");
+			break;
+		}
 	}
 }
 
 void pic() {
 	int r;
 	char tmp[10];
-	r = random(8, 1) + 1;
+	r = random(8, 2) + 1;
 	itoa(r, tmp, 10);
 	strcpy(sent, "pic/");
 	strcat(sent, tmp);
@@ -85,6 +100,16 @@ void dc(int clntSocket) {
 	return;
 }
 
+int reg(char *chname) {
+	FILE *p;
+	CHAR new;
+	*p = fopen(chname, 'w');
+	fprintf(p,
+			"Name: ;Gender: ;Born: ;height; weight: ; House: ; STR; DEX; INT; SPD; VIT; WIS; STA; CHA; HLY;"
+					" Talents: ; Abilities: ; Techniques: ; Personality Traits: ; Reputation: ; Known Locations: ;");
+	return 0;
+}
+
 int login(int clntSocket) {
 
 	char echoBuffer[RCVBUFSIZE]; /* Buffer for echo string */
@@ -97,16 +122,20 @@ int login(int clntSocket) {
 		if (!strcmp(echoBuffer, "athy91")) {
 			break;
 		}
+
 		if (!strcmp(echoBuffer, "exit")) {
 			dc(clntSocket);
 			return 1;
 		}
-		if (send(clntSocket, "FALSE", 6, 0) != 6)
-			DieWithError("send() failed");
+
+		if (!strcmp(echoBuffer, "reg")) {
+			reg();
+		}
+
+		if (send(clntSocket, "FALSE", 6, 0) != 6) DieWithError("send() failed");
 
 	}
-	if (send(clntSocket, "TRUE", 5, 0) != 5)
-		DieWithError("send() failed");
+	if (send(clntSocket, "TRUE", 5, 0) != 5) DieWithError("send() failed");
 	return 0;
 }
 
@@ -115,37 +144,20 @@ void HandleTCPClient(int clntSocket) /* TCP client handling function */
 	char echoBuffer[RCVBUFSIZE]; /* Buffer for echo string */
 	int recvMsgSize; /* Size of received message */
 
-	if (login(clntSocket))
-		return;
+	if (login(clntSocket)) return;
 
 	for (;;) {
-		/* Receive message from client */
-		if ((recvMsgSize = recv(clntSocket, echoBuffer, RCVBUFSIZE, 0)) < 0) {
-			DieWithError("recv() failed");
-		}
-
+		recvMsgSize = recv(clntSocket, echoBuffer, RCVBUFSIZE, 0);
 		echoBuffer[recvMsgSize] = '\0';
-
-		//printf("%s\n", echoBuffer);
 
 		if (!strcmp(echoBuffer, "exit")) {
 			dc(clntSocket);
 			return;
-		} else if (!strcmp(echoBuffer, "pic")) {
-			pic();
-			//printf("image %s\n", sent);
-		} else {
-			ans();
-			//printf("lan %s\n", sent);
-		}
+		} else if (!strcmp(echoBuffer, "pic")) pic();
+		else ans();
 
-		//printf("real %s\n", sent);
+		send(clntSocket, sent, strlen(sent), 0);
 
-		/* Echo message back to client */
-		if (send(clntSocket, sent, strlen(sent), 0) != strlen(sent))
-			DieWithError("send() failed");
-
-		//printf("%s\n", sent);
 	}
 	return;
 }
@@ -159,8 +171,7 @@ void *threadFunc() {
 
 		/* Wait for a client to connect */
 		if ((clntSock = accept(servSock, (struct sockaddr *) &echoClntAddr,
-				&clntLen)) < 0)
-			DieWithError("accept() failed");
+				&clntLen)) < 0) DieWithError("accept() failed");
 
 		/* clntSock is connected to a client! */
 
@@ -200,14 +211,12 @@ int main(int argc, char *argv[]) {
 
 	/* Bind to the local address */
 	if (bind(servSock, (struct sockaddr *) &echoServAddr, sizeof(echoServAddr))
-			< 0)
-		DieWithError("bind() failed");
+			< 0) DieWithError("bind() failed");
 
 	/* Mark the socket so it will listen for incoming connections */
 
 	for (;;) {
-		if (listen(servSock, MAXPENDING) < 0)
-			DieWithError("listen() failed");
+		if (listen(servSock, MAXPENDING) < 0) DieWithError("listen() failed");
 		pthread_create(&pth, NULL, threadFunc, NULL);
 		if (listen(servSock, MAXPENDING) > 0)
 			pthread_create(&pth, NULL, threadFunc, NULL);
