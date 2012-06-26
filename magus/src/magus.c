@@ -44,6 +44,8 @@ void lan(GtkWidget *widget, gpointer data) {
 	rec = recv(sock, buffer, buffsize - 1, 0);
 	buffer[rec] = '\0';
 
+	printf("lan %s\n", buffer);
+
 	gtk_button_set_label((GtkButton *) widget, buffer);
 
 }
@@ -71,20 +73,21 @@ void clcon(GtkWidget *widget, gpointer data) {
 }
 
 void login(GtkWidget *widget, gpointer data) {
-	gchar *buffer = data;
+	gchar *login = data;
 	GtkWidget *popup;
 
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (status))) {
 
-		if (send(sock, buffer, strlen(buffer) + 1, 0) != strlen(buffer) + 1)
+		if (send(sock, login, strlen(login) + 1, 0) != strlen(login) + 1)
 			puts("send() sent a different number of bytes than expected");
 
-		rec = recv(sock, buffer, buffsize - 1, 0);
+		rec = recv(sock, login, buffsize - 1, 0);
 
-		if (!strcmp(buffer, "TRUE")) {
+		printf("%s\n",login);
+
+		if (!strcmp(login, "TRUE")) {
 			return;
 		} else {
-			gtk_button_clicked((GtkButton *) cbutton);
 			gtk_button_clicked((GtkButton *) cbutton);
 			gtk_widget_hide_all(logbox);
 			gtk_widget_show_all(gamebox);
@@ -108,6 +111,8 @@ void set_image(GtkWidget *widget, gpointer data) {
 
 	rec = recv(sock, src, buffsize - 1, 0);
 	src[rec] = '\0';
+
+	printf("image %s\n", src);
 
 	pixbuf = gdk_pixbuf_new_from_file_at_scale_utf8(src, 500, 500, TRUE, error);
 	gtk_image_set_from_pixbuf( (GtkImage *)image, pixbuf);
@@ -143,7 +148,7 @@ int main(int argc, char *argv[]) {
 	style->bg_pixmap[0] = bg;
 
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_default_size(GTK_WINDOW(window), 1280, 720);
+	//gtk_window_set_default_size(GTK_WINDOW(window), 1280, 720);
 	pixbuf = gdk_pixbuf_new_from_file_utf8("logo.gif", error);
 	gtk_window_set_icon(GTK_WINDOW (window), pixbuf);
 	gtk_container_set_border_width(GTK_CONTAINER (window), 10);
@@ -164,21 +169,25 @@ int main(int argc, char *argv[]) {
 	logname = gtk_entry_new();
 	gtk_box_pack_start(GTK_BOX (logbox), logname, FALSE, FALSE, 10);
 	gtk_widget_show(logname);
+
 	pass = gtk_entry_new();
 	gtk_box_pack_start(GTK_BOX (logbox), pass, FALSE, FALSE, 10);
 	gtk_widget_show(pass);
+
 	button = gtk_button_new_with_label("login");
 	g_signal_connect(button, "clicked", G_CALLBACK (login),
 			(gpointer) "athy91");
 	gtk_box_pack_start(GTK_BOX (logbox), button, FALSE, FALSE, 10);
 	gtk_widget_show(button);
+
 	cbutton = gtk_button_new_with_label(buffer);
 	g_signal_connect(cbutton, "clicked", G_CALLBACK (lan), (gpointer) buffer);
 	gtk_box_pack_start(GTK_BOX (gamebox), cbutton, FALSE, FALSE, 10);
+
 	button = gtk_button_new_with_label("picture");
 	g_signal_connect(button, "clicked", G_CALLBACK (set_image), "pic");
 	gtk_box_pack_start(GTK_BOX (gamebox), button, FALSE, FALSE, 10);
-	gtk_widget_show(cbutton);
+
 	status = gtk_toggle_button_new_with_label("connected");
 	gtk_toggle_button_set_active((GtkToggleButton *) status, TRUE);
 	g_signal_connect(status, "toggled", G_CALLBACK (clcon), (gpointer) NULL);
