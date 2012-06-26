@@ -18,19 +18,19 @@ int servSock; /* Socket descriptor for server */
 int clntSock; /* Socket descriptor for client */
 struct sockaddr_in echoClntAddr; /* Client address */
 
-int random(int t){
-	static int l=0;
+int random(int t,int i){
+	static int l[10];
 	int r;
 	do {
 		r = (rand() % t);
-	}while (r == l);
-	l=r;
+	}while (r == l[i]);
+	l[i]=r;
 	return r;
 }
 
 void ans() {
 	int r;
-	r = random(6);
+	r = random(6, 0);
 	switch (r) {
 	case 0: {
 		strcpy(sent, "anyád");
@@ -62,7 +62,7 @@ void ans() {
 void pic() {
 	int r;
 	char tmp[10];
-	r = random(8);
+	r = random(8, 1);
 	itoa(r, tmp, 10);
 	strcpy(sent, "pic/");
 	strcat(sent, tmp);
