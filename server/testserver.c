@@ -9,15 +9,13 @@
 #include <winsock.h>    /* for socket(),... */
 #include <stdlib.h>     /* for exit() */
 #include <pthread.h>
+#include <unistd.h>
+#include <glib.h>
+#include <glib/gprintf.h>
 
 #define MAXPENDING 5    /* Maximum outstanding connection requests */
 #define RCVBUFSIZE 32
 #define LN 1
-
-char sent[20];
-int servSock; /* Socket descriptor for server */
-int clntSock; /* Socket descriptor for client */
-struct sockaddr_in echoClntAddr; /* Client address */
 
 typedef struct birth_date {
 	int year;
@@ -31,11 +29,18 @@ typedef struct character {
 	int height, weight, age, rep, str, dex, inte;
 	int spd, vit, wis, sta, cha, hly;
 	int kl[LN], pt[20], tech[20], abil[20], talent[20];
-} CHAR;
+} caracter;
+
+gchar sent[20];
+//caracter used[500];
+int servSock; /* Socket descriptor for server */
+int clntSock; /* Socket descriptor for client */
+struct sockaddr_in echoClntAddr; /* Client address */
+int logged = -1;
 
 extern int usleep();
 
-int random(int t, int i = 0) {
+int random(int t, int i) {
 	static int l[10];
 	int r;
 	do {
@@ -78,7 +83,7 @@ void ans() {
 
 void pic() {
 	int r;
-	char tmp[10];
+	gchar tmp[10];
 	r = random(8, 2) + 1;
 	itoa(r, tmp, 10);
 	strcpy(sent, "pic/");
@@ -88,7 +93,7 @@ void pic() {
 	return;
 }
 
-void DieWithError(char *errorMessage) /* Error handling function */
+void DieWithError(char *errorMessage)     //Error handling function
 {
 	perror(errorMessage);
 	exit(1);
@@ -100,28 +105,36 @@ void dc(int clntSocket) {
 	return;
 }
 
-int reg(char *chname) {
+void reg(int clntSocket) {
 	FILE *p;
-	CHAR new;
-	*p = fopen(chname, 'w');
+	gchar path[36], pass[31];
+
+	g_stpcpy(path, "user/");
+	recv(clntSocket, pass, RCVBUFSIZE, 0);
+	g_strlcat(path, pass, 36);
+	recv(clntSocket, pass, RCVBUFSIZE, 0);
+	//g_printf("%s", path);
+
+	if (!access(path, F_OK)) {
+		send(clntSocket, "FALSE", 6, 0);
+		return;
+	}
+	send(clntSocket, "TRUE", 5, 0);
+	p = fopen(path, "w");
 	fprintf(p,
 			"Name: ;Gender: ;Born: ;height; weight: ; House: ; STR; DEX; INT; SPD; VIT; WIS; STA; CHA; HLY;"
 					" Talents: ; Abilities: ; Techniques: ; Personality Traits: ; Reputation: ; Known Locations: ;");
-	return 0;
+	fclose(p);
+	return;
 }
 
 int login(int clntSocket) {
+	int i;
+	gchar echoBuffer[RCVBUFSIZE], pass[RCVBUFSIZE];     //Buffer for echo string
+	//int recvMsgSize;     //Size of received message
 
-	char echoBuffer[RCVBUFSIZE]; /* Buffer for echo string */
-	int recvMsgSize; /* Size of received message */
-
-	for (;;) {
-		if ((recvMsgSize = recv(clntSocket, echoBuffer, RCVBUFSIZE, 0)) < 0)
-			DieWithError("recv() failed");
-
-		if (!strcmp(echoBuffer, "athy91")) {
-			break;
-		}
+	for (i = 0;; ++i) {
+		recv(clntSocket, echoBuffer, RCVBUFSIZE, 0);
 
 		if (!strcmp(echoBuffer, "exit")) {
 			dc(clntSocket);
@@ -129,20 +142,26 @@ int login(int clntSocket) {
 		}
 
 		if (!strcmp(echoBuffer, "reg")) {
-			reg();
+			reg(clntSocket);
+			continue;
 		}
+
+		recv(clntSocket, pass, RCVBUFSIZE, 0);
+
+		if (!strcmp(echoBuffer, "athy91")) break;
 
 		if (send(clntSocket, "FALSE", 6, 0) != 6) DieWithError("send() failed");
 
 	}
-	if (send(clntSocket, "TRUE", 5, 0) != 5) DieWithError("send() failed");
+	send(clntSocket, "TRUE", 5, 0);
 	return 0;
 }
 
-void HandleTCPClient(int clntSocket) /* TCP client handling function */
+void HandleTCPClient(int clntSocket)     //TCP client handling function
 {
-	char echoBuffer[RCVBUFSIZE]; /* Buffer for echo string */
-	int recvMsgSize; /* Size of received message */
+	gchar echoBuffer[RCVBUFSIZE];     //Buffer for echo string
+	int recvMsgSize;     //Size of received message
+	//int ID;
 
 	if (login(clntSocket)) return;
 
@@ -163,24 +182,18 @@ void HandleTCPClient(int clntSocket) /* TCP client handling function */
 }
 
 void *threadFunc() {
-	int clntLen; /* Length of client address data structure */
-	for (;;) /* Run forever */
-	{
-		/* Set the size of the in-out parameter */
-		clntLen = sizeof(echoClntAddr);
+	int clntLen;     //Length of client address data structure
 
-		/* Wait for a client to connect */
-		if ((clntSock = accept(servSock, (struct sockaddr *) &echoClntAddr,
-				&clntLen)) < 0) DieWithError("accept() failed");
+	for (;;) {     //Run forever
+		clntLen = sizeof(echoClntAddr);     //Set the size of the in-out parameter
 
-		/* clntSock is connected to a client! */
+		clntSock = accept(servSock, (struct sockaddr *) &echoClntAddr,
+				&clntLen);     //Wait for a client to connect
 
-		printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
+		printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));     //clntSock is connected to a client!
 
 		HandleTCPClient(clntSock);
-
 	}
-
 	return NULL;
 }
 

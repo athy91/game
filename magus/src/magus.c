@@ -20,7 +20,8 @@
 #define buffsize 32
 
 WSADATA wsaData;
-GtkWidget *window, *logbox, *gamebox, *cbutton, *status, *image;
+GtkWidget *pass, *logname, *window, *logbox, *gamebox, *cbutton, *status,
+		*image;
 GdkPixbuf *pixbuf;
 GError **error = NULL;
 int sock, rec;
@@ -32,6 +33,21 @@ static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data) 
 	WSACleanup();
 	gtk_main_quit();
 	return FALSE;
+}
+
+void err(gchar *message) {
+	GtkWidget *dialog, *label, *content_area;
+	dialog = gtk_dialog_new_with_buttons("Error", (GtkWindow *) window,
+			GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL, GTK_STOCK_OK,
+			GTK_RESPONSE_NONE, NULL);
+	content_area = gtk_dialog_get_content_area(GTK_DIALOG (dialog));
+	label = gtk_label_new(message);
+
+	g_signal_connect_swapped(dialog, "response",
+			G_CALLBACK (gtk_widget_destroy), dialog);
+
+	gtk_container_add(GTK_CONTAINER (content_area), label);
+	gtk_widget_show_all(dialog);
 }
 
 void lan(GtkWidget *widget, gpointer data) {
@@ -74,14 +90,16 @@ void clcon(GtkWidget *widget, gpointer data) {
 }
 
 void login(GtkWidget *widget, gpointer data) {
-	gchar *login = data;
-	GtkWidget *popup;
+	const gchar *login, *l_pass;
 	char buffer[20];
 
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (status))) {
 
-		if (send(sock, login, strlen(login) + 1, 0) != strlen(login) + 1)
-			puts("send() sent a different number of bytes than expected");
+		login = gtk_entry_get_text((GtkEntry *) logname);
+		l_pass = gtk_entry_get_text((GtkEntry *) pass);
+
+		send(sock, login, strlen(login) + 1, 0);
+		send(sock, l_pass, strlen(l_pass) + 1, 0);
 
 		rec = recv(sock, buffer, buffsize - 1, 0);
 
@@ -94,11 +112,70 @@ void login(GtkWidget *widget, gpointer data) {
 			return;
 		}
 	} else {
-		popup = gtk_dialog_new_with_buttons("Please connect to the server",
-				(GtkWindow *) window, GTK_DIALOG_DESTROY_WITH_PARENT, "OK",
-				GTK_STOCK_OK, NULL);
-		gtk_widget_show(popup);
+		err("Please connect to the server");
 	}
+}
+
+void reg() {
+	GtkWidget *reg_dial, *label, *content_area, *r_name, *r_pass, *r_repass,
+			*hbox;
+	gint result;
+	const gchar *login, *l_pass, *l_repass;
+	gchar buffer[32];
+
+	if (!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (status))) {
+		err("Please connect to the server");
+		return;
+	}
+	reg_dial = gtk_dialog_new_with_buttons("Registration Form",
+			(GtkWindow *) window,
+			GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL, GTK_STOCK_OK,
+			GTK_RESPONSE_OK, GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
+	content_area = gtk_dialog_get_content_area(GTK_DIALOG (reg_dial));
+	label = gtk_label_new("Login:");
+	r_name = gtk_entry_new();
+	hbox = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX (hbox), label, TRUE, FALSE, 10);
+	gtk_box_pack_start(GTK_BOX (hbox), r_name, FALSE, FALSE, 10);
+	gtk_container_add(GTK_CONTAINER (content_area), hbox);
+	label = gtk_label_new("Pass:");
+	r_pass = gtk_entry_new();
+	hbox = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX (hbox), label, TRUE, FALSE, 10);
+	gtk_box_pack_start(GTK_BOX (hbox), r_pass, FALSE, FALSE, 10);
+	gtk_container_add(GTK_CONTAINER (content_area), hbox);
+	label = gtk_label_new("RePass:");
+	r_repass = gtk_entry_new();
+	hbox = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX (hbox), label, TRUE, FALSE, 10);
+	gtk_box_pack_start(GTK_BOX (hbox), r_repass, FALSE, FALSE, 10);
+	gtk_container_add(GTK_CONTAINER (content_area), hbox);
+	gtk_widget_show_all(reg_dial);
+
+	send(sock, "reg", 4, 0);
+
+	do {
+		result = gtk_dialog_run(GTK_DIALOG (reg_dial));
+		if (result != GTK_RESPONSE_OK) {
+			gtk_widget_destroy(reg_dial);
+			return;
+		}
+		login = gtk_entry_get_text((GtkEntry *) r_name);
+		l_pass = gtk_entry_get_text((GtkEntry *) r_pass);
+		l_repass = gtk_entry_get_text((GtkEntry *) r_repass);
+	} while (g_strcmp0(l_pass, l_repass));
+
+	send(sock, login, strlen(login) + 1, 0);
+	send(sock, l_pass, strlen(l_pass) + 1, 0);
+
+	recv(sock, buffer, buffsize - 1, 0);
+	//g_printf("%s", buffer);
+
+	if (g_strcmp0(buffer, "TRUE"))
+		err(
+				"There was a problem for security purposes start the registration from scratch");
+
+	gtk_widget_destroy(reg_dial);
 }
 
 void set_image(GtkWidget *widget, gpointer data) {
@@ -120,7 +197,7 @@ void set_image(GtkWidget *widget, gpointer data) {
 }
 
 int main(int argc, char *argv[]) {
-	GtkWidget *logname, *pass, *box, *button, *poz;
+	GtkWidget *box, *button, *poz, *reg_b;
 	GtkStyle *style;
 	GdkPixmap *bg;
 	char buffer[buffsize];
@@ -138,7 +215,7 @@ int main(int argc, char *argv[]) {
 	server.sin_addr.s_addr = inet_addr("192.168.1.100"); /* Server IP address */
 	server.sin_port = htons(21); /* Server port */
 	if (connect(sock, (struct sockaddr *) &server, sizeof(server)) < 0) /* Establish the connection to the server */
-		puts("connect() failed");
+	puts("connect() failed");
 
 	gtk_init(&argc, &argv);
 
@@ -176,10 +253,14 @@ int main(int argc, char *argv[]) {
 	gtk_widget_show(pass);
 
 	button = gtk_button_new_with_label("login");
-	g_signal_connect(button, "clicked", G_CALLBACK (login),
-			(gpointer) "athy91");
+	g_signal_connect(button, "clicked", G_CALLBACK (login), (gpointer) NULL);
 	gtk_box_pack_start(GTK_BOX (logbox), button, FALSE, FALSE, 10);
 	gtk_widget_show(button);
+
+	reg_b = gtk_button_new_with_label("Register");
+	g_signal_connect(reg_b, "clicked", G_CALLBACK (reg), (gpointer) "NULL");
+	gtk_box_pack_start(GTK_BOX (logbox), reg_b, FALSE, FALSE, 10);
+	gtk_widget_show(reg_b);
 
 	cbutton = gtk_button_new_with_label(buffer);
 	g_signal_connect(cbutton, "clicked", G_CALLBACK (lan), (gpointer) buffer);

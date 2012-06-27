@@ -30,14 +30,22 @@
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.mingw.exe.debug.1712889228" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.mingw.exe.debug">
 								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.mingw.exe.debug.option.optimization.level.1281555438" name="Optimization Level" superClass="gnu.c.compiler.mingw.exe.debug.option.optimization.level" valueType="enumerated"/>
 								<option id="gnu.c.compiler.mingw.exe.debug.option.debugging.level.1979514679" name="Debug Level" superClass="gnu.c.compiler.mingw.exe.debug.option.debugging.level" value="gnu.c.debugging.level.max" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.misc.other.1751722627" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -mms-bitfields" valueType="string"/>
+								<option id="gnu.c.compiler.option.include.paths.2105616559" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="C:/MinGW/GTK+/include/glib-2.0"/>
+									<listOptionValue builtIn="false" value="C:/MinGW/GTK+/lib/glib-2.0/include"/>
+								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.608446986" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.mingw.exe.debug.425752808" name="MinGW C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.mingw.exe.debug">
 								<option id="gnu.c.link.option.libs.684979392" name="Libraries (-l)" superClass="gnu.c.link.option.libs" valueType="libs">
+									<listOptionValue builtIn="false" value="glib-2.0"/>
+									<listOptionValue builtIn="false" value="intl"/>
 									<listOptionValue builtIn="false" value="ws2_32"/>
 									<listOptionValue builtIn="false" value="pthread"/>
 								</option>
 								<option id="gnu.c.link.option.paths.1441383186" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
+									<listOptionValue builtIn="false" value="C:/MinGW/GTK+/lib"/>
 									<listOptionValue builtIn="false" value="&quot;C:\MinGW\lib&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.345316553" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
@@ -53,8 +61,20 @@
 					</sourceEntries>
 				</configuration>
 			</storageModule>
-			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
-			<storageModule moduleId="packages"/>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings">
+				<externalSettings containerId="org.eclipse.cdt.managedbuilder.pkgconfig.extSettings" factoryId="org.eclipse.cdt.core.extension.container.factory">
+					<externalSetting contentTypes="org.eclipse.cdt.core.cSource:org.eclipse.cdt.core.cxxSource">
+						<entry flags="BUILTIN" kind="includePath" name="C:/MinGW/GTK+/include/glib-2.0"/>
+						<entry flags="BUILTIN" kind="includePath" name="C:/MinGW/GTK+/lib/glib-2.0/include"/>
+					</externalSetting>
+					<externalSetting contentTypes="org.eclipse.cdt.managedbuilder.core.compiledObjectFile">
+						<entry flags="RESOLVED" kind="libraryPath" name="C:/MinGW/GTK+/lib"/>
+						<entry flags="" kind="libraryFile" name="glib-2.0"/>
+						<entry flags="" kind="libraryFile" name="intl"/>
+					</externalSetting>
+				</externalSettings>
+			</storageModule>
+			<storageModule atk="false" cairo="false" cairo-fc="false" cairo-ft="false" cairo-gobject="false" cairo-pdf="false" cairo-png="false" cairo-ps="false" cairo-svg="false" cairo-win32="false" cairo-win32-font="false" fontconfig="false" freetype2="false" gail="false" gdk-2.0="false" gdk-pixbuf-2.0="false" gdk-win32-2.0="false" gio-2.0="false" gio-windows-2.0="false" glib-2.0="true" gmodule-2.0="false" gmodule-no-export-2.0="false" gobject-2.0="false" gthread-2.0="false" gtkplus-2.0="false" gtkplus-win32-2.0="false" libpng="false" libpng14="false" moduleId="packages" pango="false" pangocairo="false" pangoft2="false" pangowin32="false" pixman-1="false"/>
 		</cconfiguration>
 		<cconfiguration id="cdt.managedbuild.config.gnu.mingw.exe.release.1093631189">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.mingw.exe.release.1093631189" moduleId="org.eclipse.cdt.core.settings" name="Release">
