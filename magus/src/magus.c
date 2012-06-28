@@ -1,24 +1,31 @@
 /*
  ============================================================================
  Name        : magus.c
- Author      : Battlegod
+ Author      : Athy91
  Version     :
- Copyright   : Don't copy what's not yours!!!
- Description : GUI mode linker: -Wl -mwindows
+ Copyright   :
+ Description : maybe later
+ Note	 	 : GUI mode linker: -Wl -mwindows
  ============================================================================
  */
-
+/*
+ * INCLUDES
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <locale.h>
-#include <gtk/gtk.h>
+#include <locale.h> 	//for strings
+#include <gtk/gtk.h>	//GTK+
 #include <windows.h>
-#include <winsock.h>
-#include <gdk-pixbuf/gdk-pixbuf.h>
-
+#include <winsock.h>	//for network
+#include <gdk-pixbuf/gdk-pixbuf.h>//for pictures
+/*
+ * DEFINITIONS
+ */
 #define buffsize 32
-
+/*
+ * DECLARATIONS
+ */
 WSADATA wsaData;
 GtkWidget *pass, *logname, *window, *logbox, *gamebox, *cbutton, *status,
 		*image;
@@ -26,8 +33,10 @@ GdkPixbuf *pixbuf;
 GError **error = NULL;
 int sock, rec;
 struct sockaddr_in server;
-
-static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data) {
+/*
+ * FUNCTIONS
+ */
+static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data) {     //close window when X is pressed
 	send(sock, "exit\0", 5, 0);
 	closesocket(sock);
 	WSACleanup();
@@ -35,38 +44,40 @@ static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data) 
 	return FALSE;
 }
 
-void err(gchar *message) {
+void err(gchar *message) {     //error popup
 	GtkWidget *dialog, *label, *content_area;
-	dialog = gtk_dialog_new_with_buttons("Error", (GtkWindow *) window,
+	dialog = gtk_dialog_new_with_buttons("Error",
+			(GtkWindow *) window,     //create popup
 			GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL, GTK_STOCK_OK,
 			GTK_RESPONSE_NONE, NULL);
-	content_area = gtk_dialog_get_content_area(GTK_DIALOG (dialog));
-	label = gtk_label_new(message);
+	content_area = gtk_dialog_get_content_area(GTK_DIALOG (dialog));     //make putting something into the popup possible
+	label = gtk_label_new(message);     //make an error message
 
 	g_signal_connect_swapped(dialog, "response",
 			G_CALLBACK (gtk_widget_destroy), dialog);
+	//make sure the popup is destroyed
 
-	gtk_container_add(GTK_CONTAINER (content_area), label);
-	gtk_widget_show_all(dialog);
+	gtk_container_add(GTK_CONTAINER (content_area), label);     //put the message inside the popup
+	gtk_widget_show_all(dialog);     //show what me make
 }
 
-void lan(GtkWidget *widget, gpointer data) {
+void lan(GtkWidget *widget, gpointer data) {     //getting text then writing it on a button may be useful after overhauling
 
 	gchar *buffer = data;
 
-	if (send(sock, buffer, strlen(buffer), 0) != strlen(buffer))
-		puts("send() sent a different number of bytes than expected");
+	if (send(sock, buffer, strlen(buffer), 0) != strlen(buffer))     //send a command
+	puts("send() sent a different number of bytes than expected");
 
-	rec = recv(sock, buffer, buffsize - 1, 0);
+	rec = recv(sock, buffer, buffsize - 1, 0);     //get a message
 	buffer[rec] = '\0';
 
 	//printf("lan %s\n", buffer);
 
-	gtk_button_set_label((GtkButton *) widget, buffer);
+	gtk_button_set_label((GtkButton *) widget, buffer);     //show the message
 
 }
 
-void clcon(GtkWidget *widget, gpointer data) {
+void clcon(GtkWidget *widget, gpointer data) {     //connect or disconnect
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget))) {
 		/* If control reaches here, the toggle button is down */
 		if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
@@ -89,44 +100,45 @@ void clcon(GtkWidget *widget, gpointer data) {
 	return;
 }
 
-void login(GtkWidget *widget, gpointer data) {
+void login(GtkWidget *widget, gpointer data) {     //login function
 	const gchar *login, *l_pass;
 	char buffer[20];
 
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (status))) {
+	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (status))) {     //see if we're connected PS:Not the best way is used
 
-		login = gtk_entry_get_text((GtkEntry *) logname);
-		l_pass = gtk_entry_get_text((GtkEntry *) pass);
+		login = gtk_entry_get_text((GtkEntry *) logname);     //get name from input
+		l_pass = gtk_entry_get_text((GtkEntry *) pass);     //get password from input
 
-		send(sock, login, strlen(login) + 1, 0);
-		send(sock, l_pass, strlen(l_pass) + 1, 0);
+		send(sock, login, strlen(login) + 1, 0);     //send name to the server
+		send(sock, l_pass, strlen(l_pass) + 1, 0);     //send password to the server
 
-		rec = recv(sock, buffer, buffsize - 1, 0);
+		rec = recv(sock, buffer, buffsize - 1, 0);     //receive answer
 
-		if (strcmp(buffer, "TRUE")) {
+		if (strcmp(buffer, "TRUE")) {     //see if we were successful or not
 			return;
 		} else {
-			gtk_button_clicked((GtkButton *) cbutton);
-			gtk_widget_hide_all(logbox);
+			gtk_button_clicked((GtkButton *) cbutton);     //get some text
+			gtk_widget_hide_all(logbox);     //exchange login fields with something else
 			gtk_widget_show_all(gamebox);
 			return;
 		}
 	} else {
-		err("Please connect to the server");
+		err("Please connect to the server");     //if we're not connected make an error message
 	}
 }
 
-void reg() {
+void reg() {     //register function
 	GtkWidget *reg_dial, *label, *content_area, *r_name, *r_pass, *r_repass,
 			*hbox;
 	gint result;
 	const gchar *login, *l_pass, *l_repass;
 	gchar buffer[32];
 
-	if (!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (status))) {
+	if (!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (status))) {     //see if we're connected make an error message if not
 		err("Please connect to the server");
 		return;
 	}
+	//make the registration form
 	reg_dial = gtk_dialog_new_with_buttons("Registration Form",
 			(GtkWindow *) window,
 			GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL, GTK_STOCK_OK,
@@ -152,7 +164,7 @@ void reg() {
 	gtk_container_add(GTK_CONTAINER (content_area), hbox);
 	gtk_widget_show_all(reg_dial);
 
-	send(sock, "reg", 4, 0);
+	send(sock, "reg", 4, 0);     //tell the server we want to register
 
 	do {
 		result = gtk_dialog_run(GTK_DIALOG (reg_dial));
@@ -165,34 +177,33 @@ void reg() {
 		l_repass = gtk_entry_get_text((GtkEntry *) r_repass);
 	} while (g_strcmp0(l_pass, l_repass));
 
-	send(sock, login, strlen(login) + 1, 0);
-	send(sock, l_pass, strlen(l_pass) + 1, 0);
+	send(sock, login, strlen(login) + 1, 0);     //send name to the server
+	send(sock, l_pass, strlen(l_pass) + 1, 0);     //send password to the server
 
-	recv(sock, buffer, buffsize - 1, 0);
+	recv(sock, buffer, buffsize - 1, 0);     //receive answer
 	//g_printf("%s", buffer);
 
-	if (g_strcmp0(buffer, "TRUE"))
+	if (g_strcmp0(buffer, "TRUE"))     //see if we were successful if not make an error message
 		err(
 				"There was a problem for security purposes start the registration from scratch");
 
-	gtk_widget_destroy(reg_dial);
+	gtk_widget_destroy(reg_dial);     //destroy registration form
 }
 
-void set_image(GtkWidget *widget, gpointer data) {
+void set_image(GtkWidget *widget, gpointer data) {     //function for changing images
 	GdkPixbuf *pixbuf;
 	gchar *buffer = data;
 	gchar src[10];
 
-	if (send(sock, buffer, strlen(buffer), 0) != strlen(buffer))
-		puts("send() sent a different number of bytes than expected");
+	send(sock, buffer, strlen(buffer), 0);     //send command
 
-	rec = recv(sock, src, buffsize - 1, 0);
+	rec = recv(sock, src, buffsize - 1, 0);     //receive path of the image
 	src[rec] = '\0';
 
 	//printf("image %s\n", src);
 
-	pixbuf = gdk_pixbuf_new_from_file_at_scale_utf8(src, 500, 500, TRUE, error);
-	gtk_image_set_from_pixbuf((GtkImage *) image, pixbuf);
+	pixbuf = gdk_pixbuf_new_from_file_at_scale_utf8(src, 500, 500, TRUE, error);     //read new image
+	gtk_image_set_from_pixbuf((GtkImage *) image, pixbuf);     //exchange the old for the new image
 
 }
 
@@ -218,32 +229,35 @@ int main(int argc, char *argv[]) {
 	puts("connect() failed");
 
 	gtk_init(&argc, &argv);
+	//start GTK+
 
-	pixbuf = gdk_pixbuf_new_from_file_utf8("bgm.jpg", error);
+	pixbuf = gdk_pixbuf_new_from_file_utf8("bgm.jpg", error);     //read background
 	gdk_pixbuf_render_pixmap_and_mask(pixbuf, &bg, NULL, 0);
 	style = gtk_style_new();
 	style->bg_pixmap[0] = bg;
 
-	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);     //create window
 	//gtk_window_set_default_size(GTK_WINDOW(window), 1280, 720);
-	pixbuf = gdk_pixbuf_new_from_file_utf8("logo.gif", error);
-	gtk_window_set_icon(GTK_WINDOW (window), pixbuf);
+	pixbuf = gdk_pixbuf_new_from_file_utf8("logo.gif", error);     //read logo
+	gtk_window_set_icon(GTK_WINDOW (window), pixbuf);     //set logo
 	gtk_container_set_border_width(GTK_CONTAINER (window), 10);
+	//create close window event
 	g_signal_connect(window, "delete-event", G_CALLBACK (delete_event), NULL);
-	gtk_widget_set_style(GTK_WIDGET(window), GTK_STYLE(style));
-	box = gtk_vbox_new(FALSE, 0);
+	gtk_widget_set_style(GTK_WIDGET(window), GTK_STYLE(style));     //set background
+	box = gtk_vbox_new(FALSE, 0);     //the mess of positioning
 	poz = gtk_hbox_new(FALSE, 0);
 	logbox = gtk_vbox_new(FALSE, 0);
 	gamebox = gtk_vbox_new(FALSE, 0);
 	//image = gtk_image_new_from_file_utf8("maemo.png");
-	pixbuf = gdk_pixbuf_new_from_file_at_scale_utf8("pic/0.jpg", 500, 500, TRUE,
+	pixbuf = gdk_pixbuf_new_from_file_at_scale_utf8("pic/0.jpg", 500, 500, TRUE,     //read shown image
 			error);
-	image = gtk_image_new_from_pixbuf(pixbuf);
+	image = gtk_image_new_from_pixbuf(pixbuf);     //set image
 	gtk_container_add(GTK_CONTAINER (poz), image);
 	gtk_box_pack_start(GTK_BOX (poz), box, FALSE, FALSE, 10);
 	gtk_box_pack_start(GTK_BOX (box), logbox, FALSE, FALSE, 10);
-	gtk_box_pack_start(GTK_BOX (box), gamebox, FALSE, FALSE, 10);
+	gtk_box_pack_start(GTK_BOX (box), gamebox, FALSE, FALSE, 10);     //positioning ends here
 
+	//Setting up used Widgets -> buttons, input fields, ...
 	logname = gtk_entry_new();
 	gtk_box_pack_start(GTK_BOX (logbox), logname, FALSE, FALSE, 10);
 	gtk_widget_show(logname);
@@ -274,14 +288,14 @@ int main(int argc, char *argv[]) {
 	gtk_toggle_button_set_active((GtkToggleButton *) status, TRUE);
 	g_signal_connect(status, "toggled", G_CALLBACK (clcon), (gpointer) NULL);
 	gtk_box_pack_start(GTK_BOX (box), status, FALSE, FALSE, 10);
-	gtk_widget_show(status);
+	gtk_container_add(GTK_CONTAINER (window), poz);
 
+	//showing the parts of the window
+	gtk_widget_show(status);
 	gtk_widget_show(image);
 	gtk_widget_show(logbox);
 	gtk_widget_show(poz);
 	gtk_widget_show(box);
-	gtk_container_add(GTK_CONTAINER (window), poz);
-
 	gtk_widget_show(window);
 	gtk_main();
 
