@@ -23,14 +23,32 @@
  * DEFINITIONS
  */
 #define buffsize 32
+#define LN 1			// Number of locations -> game mechanics
+/*
+ * TYPE DEFINITIONS
+ */
+typedef struct birth_date {     //birth date -> need to be separated for age
+	int year;
+	int month;
+	int day;
+} BORN;
+
+typedef struct character {     //character data -> game mechanics
+	BORN born;
+	char name[31], House[31], Gender;
+	int height, weight, age, rep, str, dex, inte;
+	int spd, vit, wis, sta, cha, hly;
+	int kl[LN], pt[20], tech[20], abil[20], talent[20];
+} caracter;
 /*
  * DECLARATIONS
  */
 WSADATA wsaData;
 GtkWidget *pass, *logname, *window, *logbox, *gamebox, *cbutton, *status,
-		*image;
+		*image, *stats, *name, *house, *gender, *born, *height, *weight;
 GdkPixbuf *pixbuf;
 GError **error = NULL;
+caracter user;
 int sock, rec;
 struct sockaddr_in server;
 /*
@@ -42,6 +60,45 @@ static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data) 
 	WSACleanup();
 	gtk_main_quit();
 	return FALSE;
+}
+
+GtkWidget *make_stats() {
+	GtkWidget *stat, *hbox, *label;
+
+	stat = gtk_vbox_new(FALSE, 0);
+	hbox = gtk_hbox_new(FALSE, 0);
+
+	label = gtk_label_new("Name:");
+	gtk_box_pack_start(GTK_BOX (hbox), label, TRUE, FALSE, 10);
+	house = gtk_label_new(user.House);
+	gtk_box_pack_start(GTK_BOX (hbox), house, FALSE, FALSE, 10);
+	name = gtk_label_new(user.name);
+	gtk_box_pack_start(GTK_BOX (hbox), name, FALSE, FALSE, 10);
+	gtk_box_pack_start(GTK_BOX (stat), hbox, FALSE, FALSE, 10);
+
+	hbox = gtk_hbox_new(FALSE, 0);
+	label = gtk_label_new("Gender:");
+	gtk_box_pack_start(GTK_BOX (hbox), label, TRUE, FALSE, 10);
+	gender = gtk_label_new(NULL);
+	gtk_box_pack_start(GTK_BOX (hbox), gender, FALSE, FALSE, 10);
+	label = gtk_label_new("Birth date:");
+	gtk_box_pack_start(GTK_BOX (hbox), label, TRUE, FALSE, 10);
+	born = gtk_label_new(NULL);
+	gtk_box_pack_start(GTK_BOX (hbox), born, FALSE, FALSE, 10);
+	gtk_box_pack_start(GTK_BOX (stat), hbox, FALSE, FALSE, 10);
+
+	hbox = gtk_hbox_new(FALSE, 0);
+	label = gtk_label_new("Height:");
+	gtk_box_pack_start(GTK_BOX (hbox), label, TRUE, FALSE, 10);
+	height = gtk_label_new(NULL);
+	gtk_box_pack_start(GTK_BOX (hbox), height, FALSE, FALSE, 10);
+	label = gtk_label_new("Weight:");
+	gtk_box_pack_start(GTK_BOX (hbox), label, TRUE, FALSE, 10);
+	weight = gtk_label_new(NULL);
+	gtk_box_pack_start(GTK_BOX (hbox), weight, FALSE, FALSE, 10);
+	gtk_box_pack_start(GTK_BOX (stat), hbox, FALSE, FALSE, 10);
+
+	return stat;
 }
 
 void err(gchar *message) {     //error popup
@@ -103,6 +160,7 @@ void clcon(GtkWidget *widget, gpointer data) {     //connect or disconnect
 void login(GtkWidget *widget, gpointer data) {     //login function
 	const gchar *login, *l_pass;
 	char buffer[20];
+	gchar full[64], temp[20];
 
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (status))) {     //see if we're connected PS:Not the best way is used
 
@@ -117,6 +175,35 @@ void login(GtkWidget *widget, gpointer data) {     //login function
 		if (strcmp(buffer, "TRUE")) {     //see if we were successful or not
 			return;
 		} else {
+			recv(sock, (char *) &user, sizeof(caracter), 0);
+			printf(
+					"%s ;%c ;%d.%d.%d ;%d ;%d ;%s ;%d ;%d ;%d ;%d ;%d ;%d ;%d ;%d ;%d ;"
+							" Talents: ; Abilities: ; Techniques: ; Personality Traits: ; Reputation: ; Known Locations: ;",
+					user.name, user.Gender, user.born.year, user.born.month,
+					user.born.day, user.height, user.weight, user.House,
+					user.str, user.dex, user.inte, user.vit, user.wis, user.sta,
+					user.spd, user.cha, user.hly);
+
+			g_stpcpy(full, user.House);
+			g_strlcat(full, " ", 32);
+			g_strlcat(full, user.name, 63);
+			gtk_label_set_text((GtkLabel *) name, full);
+			gtk_label_set_text((GtkLabel *) name, full);
+			itoa(user.born.year, temp, 10);
+			g_stpcpy(full, temp);
+			g_strlcat(full, ".", 5);
+			itoa(user.born.month, temp, 10);
+			g_strlcat(full, temp, 7);
+			g_strlcat(full, ".", 8);
+			itoa(user.born.day, temp, 10);
+			g_strlcat(full, temp, 10);
+			gtk_label_set_text((GtkLabel *) born, full);
+			gtk_label_set_text((GtkLabel *) gender,
+					(user.Gender == 'F') ? "Female" : "Male");
+			itoa(user.height, full, 10);
+			gtk_label_set_text((GtkLabel *) height, full);
+			itoa(user.weight, full, 10);
+			gtk_label_set_text((GtkLabel *) weight, full);
 			gtk_button_clicked((GtkButton *) cbutton);     //get some text
 			gtk_widget_hide_all(logbox);     //exchange login fields with something else
 			gtk_widget_show_all(gamebox);
@@ -208,7 +295,7 @@ void set_image(GtkWidget *widget, gpointer data) {     //function for changing i
 }
 
 int main(int argc, char *argv[]) {
-	GtkWidget *box, *button, *poz, *reg_b;
+	GtkWidget *box, *button, *poz, *reg_b, *frame;
 	GtkStyle *style;
 	GdkPixmap *bg;
 	char buffer[buffsize];
@@ -223,7 +310,7 @@ int main(int argc, char *argv[]) {
 
 	memset(&server, 0, sizeof(server)); /* Zero out structure */
 	server.sin_family = AF_INET; /* Internet address family */
-	server.sin_addr.s_addr = inet_addr("192.168.1.100"); /* Server IP address */
+	server.sin_addr.s_addr = inet_addr("127.0.0.1"); /* Server IP address */
 	server.sin_port = htons(21); /* Server port */
 	if (connect(sock, (struct sockaddr *) &server, sizeof(server)) < 0) /* Establish the connection to the server */
 	puts("connect() failed");
@@ -247,17 +334,23 @@ int main(int argc, char *argv[]) {
 	box = gtk_vbox_new(FALSE, 0);     //the mess of positioning
 	poz = gtk_hbox_new(FALSE, 0);
 	logbox = gtk_vbox_new(FALSE, 0);
-	gamebox = gtk_vbox_new(FALSE, 0);
+	gamebox = gtk_vbox_new(FALSE, 0);     //positioning ends here
+
+	//Setting up used Widgets -> buttons, input fields, ...
 	//image = gtk_image_new_from_file_utf8("maemo.png");
 	pixbuf = gdk_pixbuf_new_from_file_at_scale_utf8("pic/0.jpg", 500, 500, TRUE,     //read shown image
 			error);
 	image = gtk_image_new_from_pixbuf(pixbuf);     //set image
-	gtk_container_add(GTK_CONTAINER (poz), image);
-	gtk_box_pack_start(GTK_BOX (poz), box, FALSE, FALSE, 10);
-	gtk_box_pack_start(GTK_BOX (box), logbox, FALSE, FALSE, 10);
-	gtk_box_pack_start(GTK_BOX (box), gamebox, FALSE, FALSE, 10);     //positioning ends here
+	frame = gtk_frame_new(NULL);
+	gtk_frame_set_shadow_type((GtkFrame *) frame, GTK_SHADOW_ETCHED_IN);
+	gtk_container_add(GTK_CONTAINER (frame), image);
+	gtk_container_add(GTK_CONTAINER (poz), frame);
+	gtk_widget_show(frame);
 
-	//Setting up used Widgets -> buttons, input fields, ...
+	gtk_box_pack_start(GTK_BOX (poz), box, FALSE, FALSE, 10);     //a bit of positioning
+	gtk_box_pack_start(GTK_BOX (box), logbox, FALSE, FALSE, 10);
+	gtk_box_pack_start(GTK_BOX (box), gamebox, FALSE, FALSE, 10);     //end
+
 	logname = gtk_entry_new();
 	gtk_box_pack_start(GTK_BOX (logbox), logname, FALSE, FALSE, 10);
 	gtk_widget_show(logname);
@@ -283,6 +376,9 @@ int main(int argc, char *argv[]) {
 	button = gtk_button_new_with_label("picture");
 	g_signal_connect(button, "clicked", G_CALLBACK (set_image), "pic");
 	gtk_box_pack_start(GTK_BOX (gamebox), button, FALSE, FALSE, 10);
+
+	stats = make_stats();
+	gtk_box_pack_start(GTK_BOX (gamebox), stats, FALSE, FALSE, 10);
 
 	status = gtk_toggle_button_new_with_label("connected");
 	gtk_toggle_button_set_active((GtkToggleButton *) status, TRUE);

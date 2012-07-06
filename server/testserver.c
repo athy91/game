@@ -134,14 +134,15 @@ void reg(int clntSocket) {     //A registration function -> game mechanics
 	p = fopen(path, "w");     //make the user's file
 	fprintf(
 			p,     //if we made it we should write something to it
-			"Name: ;Gender: ;Born: ;height; weight: ; House: ; STR; DEX; INT; SPD; VIT; WIS; STA; CHA; HLY;"
+			"Name: ;Gender: ; Born: ;height;weight: ;House: ;STR ;DEX ;INT ;VIT ;WIS ;STA ;SPD ;CHA ;HLY ;"
 					" Talents: ; Abilities: ; Techniques: ; Personality Traits: ; Reputation: ; Known Locations: ;");
 	fclose(p);     //close the file
 	return;     //end function
 }
 
-int login(int clntSocket) {
-	gchar echoBuffer[RCVBUFSIZE], pass[RCVBUFSIZE];     //data receiving strings
+int login(int clntSocket, int ID) {
+	gchar echoBuffer[RCVBUFSIZE], pass[RCVBUFSIZE], path[36];     //data receiving strings
+	FILE *p;
 	//int recvMsgSize;     //Size of received message
 
 	for (;;) {
@@ -159,12 +160,36 @@ int login(int clntSocket) {
 
 		recv(clntSocket, pass, RCVBUFSIZE, 0);     //receive password
 
-		if (!strcmp(echoBuffer, "athy91")) break;     //check who wants to login to be overhauled
+		if (!access(path, F_OK)) {     //check if file is present -> as in already registered or not
+			//file was present
+			break;
+		}
+
+		if (!strcmp(echoBuffer, "athy91")) break;     //check who wants to login -> to be overhauled
 
 		if (send(clntSocket, "FALSE", 6, 0) != 6) DieWithError("send() failed");     //send failed signal
 
 	}
+
+	g_stpcpy(path, "user/");     //prepare the path
+	g_strlcat(path, echoBuffer, 36);     //make the path
+	//g_printf("%s", path);
+
+	p = fopen(path, "r");     //make the user's file
+	fscanf(
+			p,     //if we made it we should write something to it
+			"%s ;%c ;%d.%d.%d ;%d ;%d ;%s ;%d ;%d ;%d ;%d ;%d ;%d ;%d ;%d ;%d ;"
+					" Talents: ; Abilities: ; Techniques: ; Personality Traits: ; Reputation: ; Known Locations: ;",
+			used[ID].name, &used[ID].Gender, &used[ID].born.year,
+			&used[ID].born.month, &used[ID].born.day, &used[ID].height,
+			&used[ID].weight, used[ID].House, &used[ID].str, &used[ID].dex,
+			&used[ID].inte, &used[ID].vit, &used[ID].wis, &used[ID].sta,
+			&used[ID].spd, &used[ID].cha, &used[ID].hly);
+	fclose(p);     //close the file
+
 	send(clntSocket, "TRUE", 5, 0);     //send OK signal
+	send(clntSocket, (const char *) used + ID * sizeof(caracter),
+			sizeof(caracter), 0);
 	return 0;
 }
 
@@ -172,9 +197,10 @@ void HandleTCPClient(int clntSocket)     //TCP client handling function
 {
 	gchar echoBuffer[RCVBUFSIZE];     //Buffer for echo string
 	int recvMsgSize;     //Size of received message
-	int ID;     //not in use yet
+	static int ID = 0;     //not in use yet
 
-	if (login(clntSocket)) return;     //try to log in client and check if it was successful
+	if (login(clntSocket, ID)) return;     //try to log in client and check if it was successful
+	++ID;     //make sure next time we don't overwrite this user
 
 	for (;;) {     //if login was successful keep connection and do the job
 		recvMsgSize = recv(clntSocket, echoBuffer, RCVBUFSIZE, 0);     //receive commands
@@ -237,8 +263,8 @@ int main(int argc, char *argv[]) {
 
 	for (;;) {
 		if (listen(servSock, MAXPENDING) < 0) DieWithError("listen() failed");     // Mark the socket so it will listen for incoming connections
-		pthread_create(&pth, NULL, threadFunc, NULL);//if connection is found create a thread
-		usleep(1);//lets see what our theads are doing
+		pthread_create(&pth, NULL, threadFunc, NULL);     //if connection is found create a thread
+		usleep(1);     //lets see what our theads are doing
 	}
 
 	return EXIT_SUCCESS;
